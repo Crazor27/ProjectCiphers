@@ -1,9 +1,46 @@
 #include <iostream>
+#include <cassert>
 #include <cmath>
 
+char* caesars_cipher (char* word, std::size_t input_size, int shift_amount);
+char* atbash_cipher(char* word, std::size_t input_size);
+//binary-to-text encryption
 void scramble_and_xor(char *plaintext, unsigned long key, int count);
 char * encode(char *plaintext, unsigned long key);
 char * decode(char *ciphertext, unsigned long key);
+
+
+char* atbash_cipher(char* word, std::size_t input_size) {
+	char* atbash = new char[input_size];
+	for (std::size_t i{0}; i < input_size; i++) {
+		char *word2 = word + i;
+		if(*word2 >= 'a' && *word2 <= 'z') {
+			*(atbash + i) = *caesars_cipher(word2, 1, 'z' - 2*(*(word+i)) + 'a');
+		} else {
+			assert(*word2 >= 'A' && *word2 <= 'Z');
+			*(atbash + i) = *caesars_cipher(word2, 1, 'Z' - 2*(*(word+i)) + 'A');
+		}
+	}
+	*(atbash + input_size) = '\0';
+
+	return atbash;
+}
+
+char* caesars_cipher ( char* word, std::size_t input_size, int shift_amount) {
+	 char * shifted = new  char[input_size];
+	 for (std::size_t i{0}; i < input_size; i++) {
+		char unshifted = *(word + i);
+		shifted[i] = (char)*(word + i) + shift_amount;
+
+		if((unshifted >= 'a' && unshifted <= 'z' && shifted[i] < 'a') || (unshifted >= 'A' && unshifted <='Z' && shifted[i] < 'A')) {
+			shifted[i] +=26;
+		} else if((unshifted >= 'a' && unshifted <= 'z' && shifted[i] > 'z') || (unshifted >= 'A' && unshifted <='Z' && shifted[i] > 'Z')) {
+			shifted[i] -=26;
+		}
+	}
+
+	return shifted;
+}
 
 void scramble_and_xor(char *plaintext, unsigned long key, int count) {
 	unsigned char state_array[256];
@@ -116,29 +153,49 @@ char * decode(char *ciphertext, unsigned long key) {
 }
 
 int main() {
+	int input_size;
+	int shift_amount;
 
-	//example
-/*
-	char str0[]{ "Hello World" };
-	std::cout << "\"" << str0 << "\"" << std::endl;
-	char *ciphertext{ encode( str0, 51323 ) };
-	std::cout<< "Encrypted text: \"" << ciphertext << "\"" << std::endl;
-	char *plaintext{ decode( ciphertext, 51323 ) };
-	std::cout << "Decrypted text: \"" << plaintext << "\"" << std::endl;
-	delete[] plaintext;
-	plaintext= nullptr;
-	delete[] ciphertext;
-	ciphertext= nullptr;
-*/
-	char str0[]{""};
-	int key = rand() % 1000 + 1;
+	int encrypt;
+	std::cout << "This program can encrypt strings. To encrypt using atbash, enter \" 1\"" << std::endl;
+	std::cout << "To encrypt using caesar cipher, enter \"2\"." << std::endl;
+	std::cout << "To encrypt using a key and binary-to-text, enter \"3\"." << std::endl;
 
-	std::cout << "Input a string to be encrypted" << std::endl;
-	std::cin >> str0;
-	char* ciphertext = encode(str0, key);
-	std::cout << "This is the encoded string: \"" << ciphertext << "\"" << std::endl;
-	char* plaintext = decode(ciphertext, key);
-	std::cout << "This is the decoded string: \"" << plaintext << "\"" << std::endl;
+	std::cin >> encrypt;
 
+	switch (encrypt)
+	{
+		case 1: {
+			std::cout << "Enter ( input size, word)." << std::endl;
+			std::cin >> input_size;
+			char* word = new char[input_size];
+			std::cin >> word;
+			word = atbash_cipher(word, input_size);
+			std:: cout << "Your string after atbash encryption is: " << word<< std::endl;
+		} break;
+		case 2:{
+			std::cout << "Enter (input size, word, shift amount)." << std::endl;
+			std::cin >> input_size;
+			char* word = new char[input_size];
+			std::cin >> word;
+			std::cin >> shift_amount;
+			word = caesars_cipher(word, input_size, shift_amount);
+			std:: cout << "Your string after caesar cipher with shift" << shift_amount << "is: " << word<< std::endl;
+		} break;
+		case 3:{
+			int key = rand() % 1000 + 1;
+			std::cout << "Input a string to be encrypted." << std::endl;
+			char* word;
+			std::cin >> word;
+			word = encode(word, key);
+			std:: cout << "Your string after binary-to-text encryption with key number " << shift_amount << " is: " << "\"" << word << "\"" << std::endl;
+			/*
+			char* plaintext = decode(ciphertext, key);
+			std::cout << "This is the decoded string: \"" << plaintext << "\"" << std::endl;
+			 */
+		} break;
+		default:
+			break;
+		}
 	return 0;
 }
