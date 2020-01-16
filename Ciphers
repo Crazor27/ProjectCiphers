@@ -1,0 +1,144 @@
+#include <iostream>
+#include <cmath>
+
+void scramble_and_xor(char *plaintext, unsigned long key, int count);
+char * encode(char *plaintext, unsigned long key);
+char * decode(char *ciphertext, unsigned long key);
+
+void scramble_and_xor(char *plaintext, unsigned long key, int count) {
+	unsigned char state_array[256];
+	unsigned char temp;
+	int i{0}, j{0}, k, r;
+
+	for ( int m = 0; m < 256; m++) {
+		state_array[m] = m;
+	}
+
+	//Scramble state array based on key
+	for( int m = 0; m < 256; m++) {
+		k = i % 64;
+		j = (j + state_array[i] + ((key & (1L << k))>> k)) % 256;
+		temp = state_array[i];
+		state_array[i] = state_array[j];
+		state_array[j] = temp;
+		i = (i + 1) % 256;
+	}
+
+	//xor plaintext with pseudo random bits
+	for (int m = 0; m < count; m++) {
+		i = (i + 1) % 256;
+		j = (j + state_array[i]) % 256;
+		temp = state_array[i];
+		state_array[i] = state_array[j];
+		state_array[j] = temp;
+		r = (state_array[i] + state_array[j]) % 256;
+		r = state_array[r];
+		plaintext[m] ^= r;
+	}
+}
+
+char * encode (char *plaintext, unsigned long key) {
+	int count{0};
+
+	while (plaintext[count] != '\0') {
+		count++;
+	}
+
+	//if plaintext length isnt a multiple of 4,it is reassigned to
+	//equal a new larger array with appended null characters
+	if (count % 4 != 0) {
+		char * temporary = new char[count + 4 - count % 4];
+		for (int i = 0; i < count; i++) {
+			*(temporary + i) = *(plaintext + i);
+		}
+		plaintext = new char[count + 4 - count % 4];
+	for (int i = 0; i < count+ 4 - count % 4; i++) {
+		plaintext[i] = temporary[i];
+	}
+	delete temporary;
+	temporary = nullptr;
+
+	count += (4 - count % 4);
+	for (int i = 0; i < (4 - count % 4); i++) {
+		plaintext[count - 1 + i] = '\0';
+		}
+	}
+
+	scramble_and_xor(plaintext,key,count);
+
+	//ASCII Armour
+	char *ciphertext = new char[5 * (count/4) + 1];
+	for(int i = 0; i < (count/4); i++) {
+		unsigned int num{0};
+		for ( int k = 0; k < 4; k++) {
+			num += ((unsigned int) ((unsigned char)plaintext[4*i + k])) << (24 - 8*k);
+		}
+
+		//converts long into base 85, makes the characters printable
+		for (int j = 0; j < 5; j++) {
+			ciphertext[5*i + 4-j] = (num % 85) + '!';
+			num /= 85;
+		}
+		ciphertext[5 * (count/4)] = '\0';
+	}
+	return ciphertext;
+}
+
+char * decode(char *ciphertext, unsigned long key) {
+	int counter{0};
+
+	//determine length of original text w/null chars
+	while (ciphertext[counter] != '\0') {
+		counter++;
+	}
+	char* plaintext = new char[4*counter/5 + 1];
+
+	//undo ASCII Armour
+	for (int i = 0; i < counter; i++) {
+		unsigned int num{0};
+		for (int j = 0; j < 5; j++) {
+			if ((5*i + j) <= counter ) {
+			num += pow(85, 4 - j)*((unsigned int)((unsigned char)ciphertext[5*i + j] - '!'));
+			}
+		}
+		for (int k = 0; k < 4; k++) {
+			//ensures that the array is not assigned above bounds
+			if ((4*i + k) <= (4*counter/5)) {
+				plaintext[4*i + k] = (unsigned char)(((unsigned int)(num <<  8*k)) >> 24);
+			}
+		}
+	}
+
+	scramble_and_xor(plaintext,key,4*counter/5);
+
+	plaintext[4*counter/5] = '\0';
+	return plaintext;
+}
+
+int main() {
+
+	//example
+/*
+	char str0[]{ "Hello World" };
+	std::cout << "\"" << str0 << "\"" << std::endl;
+	char *ciphertext{ encode( str0, 51323 ) };
+	std::cout<< "Encrypted text: \"" << ciphertext << "\"" << std::endl;
+	char *plaintext{ decode( ciphertext, 51323 ) };
+	std::cout << "Decrypted text: \"" << plaintext << "\"" << std::endl;
+	delete[] plaintext;
+	plaintext= nullptr;
+	delete[] ciphertext;
+	ciphertext= nullptr;
+*/
+	char str0[]{""};
+	int key = rand() % 1000 + 1;
+
+	std::cout << "Input a string to be encrypted" << std::endl;
+	std::cin >> str0;
+	char* ciphertext = encode(str0, key);
+	std::cout << "This is the encoded string: \"" << ciphertext << "\"" << std::endl;
+	char* plaintext = decode(ciphertext, key);
+	std::cout << "This is the decoded string: \"" << plaintext << "\"" << std::endl;
+
+	return 0;
+}
